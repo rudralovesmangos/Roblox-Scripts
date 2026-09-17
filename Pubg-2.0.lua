@@ -10,6 +10,9 @@ local WeaponHit = ReplicatedStorage
 	:WaitForChild("Network")
 	:WaitForChild("WeaponHit")
 
+local TargetPosition = Vector3.new(-633, 742, 151)
+local LerpTime = 0.25
+
 --// GUI
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "PlayerTargetGui"
@@ -73,7 +76,23 @@ local ExcludeCorner = Instance.new("UICorner")
 ExcludeCorner.CornerRadius = UDim.new(0, 6)
 ExcludeCorner.Parent = ExcludeBox
 
+--// Toggle button
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(1, -20, 0, 50)
+ToggleButton.Position = UDim2.new(0, 10, 0, 120)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
+ToggleButton.Text = "OFF"
+ToggleButton.TextColor3 = Color3.new(1, 1, 1)
+ToggleButton.TextSize = 16
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.Parent = Main
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 6)
+ToggleCorner.Parent = ToggleButton
+
 local Enabled = false
+local Busy = false
 
 --// Find matching player
 local function FindPlayer(Input)
@@ -170,6 +189,44 @@ local function GetExcludedPlayers()
 	return Excluded
 end
 
+--// Lerp to the target position
+local function LerpToTarget()
+	local Character = LocalPlayer.Character
+
+	if not Character then
+		return false
+	end
+
+	local StartCFrame = Character:GetPivot()
+	local EndCFrame = CFrame.new(TargetPosition)
+
+	local StartTime = os.clock()
+
+	while true do
+		if not Enabled then
+			return false
+		end
+
+		local Alpha = math.clamp(
+			(os.clock() - StartTime) / LerpTime,
+			0,
+			1
+		)
+
+		local SmoothAlpha = Alpha * Alpha * (3 - 2 * Alpha)
+
+		Character:PivotTo(StartCFrame:Lerp(EndCFrame, SmoothAlpha))
+
+		if Alpha >= 1 then
+			break
+		end
+
+		RunService.Heartbeat:Wait()
+	end
+
+	return true
+end
+
 --// Get and equip SMG
 local function GetAndEquipSMG()
 	local Character = LocalPlayer.Character
@@ -213,13 +270,11 @@ local function GetAndEquipSMG()
 	return nil
 end
 
---// Play gunfire sound after the event
+--// Play gunfire sound
 local function PlayGunfireSound(Weapon)
 	if not Weapon then
 		return
 	end
-
-	local SoundToPlay
 
 	for _, Object in ipairs(Weapon:GetDescendants()) do
 		if Object:IsA("Sound") then
@@ -230,14 +285,10 @@ local function PlayGunfireSound(Weapon)
 				or string.find(LowerName, "shot")
 				or string.find(LowerName, "gun") then
 
-				SoundToPlay = Object
-				break
+				Object:Play()
+				return
 			end
 		end
-	end
-
-	if SoundToPlay then
-		SoundToPlay:Play()
 	end
 end
 
@@ -266,9 +317,9 @@ local function FireAtPlayer(Player, Weapon)
 		return
 	end
 
-	local TargetPosition = TargetPart.Position
+	local TargetPartPosition = TargetPart.Position
 	local OriginPosition = MyCharacter:GetPivot().Position
-	local Difference = TargetPosition - OriginPosition
+	local Difference = TargetPartPosition - OriginPosition
 
 	local Direction
 
@@ -282,7 +333,7 @@ local function FireAtPlayer(Player, Weapon)
 		[1] = Weapon,
 
 		[2] = {
-			["p"] = TargetPosition,
+			["p"] = TargetPartPosition,
 			["pid"] = 1,
 			["part"] = TargetPart,
 			["d"] = Difference.Magnitude,
@@ -300,15 +351,30 @@ end
 
 --// Fire at all players
 local function FireAtAllPlayers()
+	if Busy then
+		return
+	end
+
+	Busy = true
+
+	-- First move to the specified position
+	if not LerpToTarget() then
+		Busy = false
+		return
+	end
+
+	-- Then equip the SMG
 	local Weapon = GetAndEquipSMG()
 
 	if not Weapon then
+		Busy = false
 		return
 	end
 
 	local Excluded = GetExcludedPlayers()
 	local Fired = false
 
+	-- Then perform the events
 	for _, Player in ipairs(Players:GetPlayers()) do
 		if Player ~= LocalPlayer
 			and not Excluded[string.lower(Player.Name)] then
@@ -318,41 +384,21 @@ local function FireAtAllPlayers()
 		end
 	end
 
-	-- Play once after sending the events
+	-- Play sound after the events
 	if Fired then
 		PlayGunfireSound(Weapon)
 	end
+
+	Busy = false
 end
 
---// Toggle button
-local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.new(1, -20, 0, 50)
-ToggleButton.Position = UDim2.new(0, 10, 0, 120)
-ToggleButton.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
-ToggleButton.Text = "OFF"
-ToggleButton.TextColor3 = Color3.new(1, 1, 1)
-ToggleButton.TextSize = 16
-ToggleButton.Font = Enum.Font.GothamBold
-ToggleButton.Parent = Main
-
-local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.CornerRadius = UDim.new(0, 6)
-ToggleCorner.Parent = ToggleButton
-
+--// Toggle
 ToggleButton.MouseButton1Click:Connect(function()
 	Enabled = not Enabled
 
 	if Enabled then
-		local Weapon = GetAndEquipSMG()
-
-		if Weapon then
-			ToggleButton.Text = "ON"
-			ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 130, 70)
-		else
-			Enabled = false
-			ToggleButton.Text = "OFF"
-			ToggleButton.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
-		end
+		ToggleButton.Text = "ON"
+		ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 130, 70)
 	else
 		ToggleButton.Text = "OFF"
 		ToggleButton.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
