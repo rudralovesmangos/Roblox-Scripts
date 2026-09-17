@@ -73,21 +73,6 @@ local ExcludeCorner = Instance.new("UICorner")
 ExcludeCorner.CornerRadius = UDim.new(0, 6)
 ExcludeCorner.Parent = ExcludeBox
 
---// Toggle button
-local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.new(1, -20, 0, 50)
-ToggleButton.Position = UDim2.new(0, 10, 0, 120)
-ToggleButton.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
-ToggleButton.Text = "OFF"
-ToggleButton.TextColor3 = Color3.new(1, 1, 1)
-ToggleButton.TextSize = 16
-ToggleButton.Font = Enum.Font.GothamBold
-ToggleButton.Parent = Main
-
-local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.CornerRadius = UDim.new(0, 6)
-ToggleCorner.Parent = ToggleButton
-
 local Enabled = false
 
 --// Find matching player
@@ -228,34 +213,23 @@ local function GetAndEquipSMG()
 	return nil
 end
 
---// Play a loud rifle-style gunfire sound
-local function PlayGunFireSound(Weapon)
+--// Play gunfire sound after the event
+local function PlayGunfireSound(Weapon)
 	if not Weapon then
 		return
 	end
 
-	local SoundToPlay = nil
+	local SoundToPlay
 
-	-- Prefer an existing firing sound from the weapon
 	for _, Object in ipairs(Weapon:GetDescendants()) do
 		if Object:IsA("Sound") then
-			local Name = string.lower(Object.Name)
+			local LowerName = string.lower(Object.Name)
 
-			if string.find(Name, "fire")
-				or string.find(Name, "shoot")
-				or string.find(Name, "shot")
-				or string.find(Name, "gun") then
+			if string.find(LowerName, "fire")
+				or string.find(LowerName, "shoot")
+				or string.find(LowerName, "shot")
+				or string.find(LowerName, "gun") then
 
-				SoundToPlay = Object
-				break
-			end
-		end
-	end
-
-	-- Fallback to the first weapon sound
-	if not SoundToPlay then
-		for _, Object in ipairs(Weapon:GetDescendants()) do
-			if Object:IsA("Sound") then
 				SoundToPlay = Object
 				break
 			end
@@ -263,9 +237,6 @@ local function PlayGunFireSound(Weapon)
 	end
 
 	if SoundToPlay then
-		-- Louder, punchier rifle-style playback
-		SoundToPlay.Volume = math.max(SoundToPlay.Volume, 3)
-		SoundToPlay.PlaybackSpeed = 0.85
 		SoundToPlay:Play()
 	end
 end
@@ -347,12 +318,27 @@ local function FireAtAllPlayers()
 		end
 	end
 
+	-- Play once after sending the events
 	if Fired then
-		PlayGunFireSound(Weapon)
+		PlayGunfireSound(Weapon)
 	end
 end
 
---// Toggle
+--// Toggle button
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(1, -20, 0, 50)
+ToggleButton.Position = UDim2.new(0, 10, 0, 120)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
+ToggleButton.Text = "OFF"
+ToggleButton.TextColor3 = Color3.new(1, 1, 1)
+ToggleButton.TextSize = 16
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.Parent = Main
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 6)
+ToggleCorner.Parent = ToggleButton
+
 ToggleButton.MouseButton1Click:Connect(function()
 	Enabled = not Enabled
 
@@ -418,7 +404,6 @@ UserInputService.InputChanged:Connect(function(input)
 	Main.Position = UDim2.new(
 		StartPosition.X.Scale,
 		StartPosition.X.Offset + Delta.X,
-
 		StartPosition.Y.Scale,
 		StartPosition.Y.Offset + Delta.Y
 	)
