@@ -90,7 +90,7 @@ ToggleCorner.Parent = ToggleButton
 
 local Enabled = false
 
---// Find player by username/display name
+--// Find matching player
 local function FindPlayer(Input)
 	Input = Input:gsub("^%s+", ""):gsub("%s+$", "")
 
@@ -107,6 +107,13 @@ local function FindPlayer(Input)
 		end
 	end
 
+	-- Username starts with typed text
+	for _, Player in ipairs(Players:GetPlayers()) do
+		if string.sub(string.lower(Player.Name), 1, #LowerInput) == LowerInput then
+			return Player
+		end
+	end
+
 	-- Exact display name
 	for _, Player in ipairs(Players:GetPlayers()) do
 		if string.lower(Player.DisplayName) == LowerInput then
@@ -114,14 +121,7 @@ local function FindPlayer(Input)
 		end
 	end
 
-	-- Username prefix
-	for _, Player in ipairs(Players:GetPlayers()) do
-		if string.sub(string.lower(Player.Name), 1, #LowerInput) == LowerInput then
-			return Player
-		end
-	end
-
-	-- Display name prefix
+	-- Display name starts with typed text
 	for _, Player in ipairs(Players:GetPlayers()) do
 		if string.sub(string.lower(Player.DisplayName), 1, #LowerInput) == LowerInput then
 			return Player
@@ -131,47 +131,46 @@ local function FindPlayer(Input)
 	return nil
 end
 
---// Complete the current username when Enter is pressed
-local function CompleteUsername()
+--// Complete the username currently being typed
+local function CompleteCurrentUsername()
 	local Text = ExcludeBox.Text
 
-	-- Get everything after the last comma
-	local LastComma = string.find(Text, ",[^,]*$")
+	-- Find the last comma
+	local LastComma = string.match(Text, ".*(),")
 
-	local Prefix = ""
-	local CurrentInput = Text
+	local Prefix
+	local CurrentText
 
 	if LastComma then
 		Prefix = string.sub(Text, 1, LastComma)
-		CurrentInput = string.sub(Text, LastComma + 1)
+		CurrentText = string.sub(Text, LastComma + 1)
+	else
+		Prefix = ""
+		CurrentText = Text
 	end
 
-	CurrentInput = CurrentInput:gsub("^%s+", ""):gsub("%s+$", "")
+	CurrentText = CurrentText:gsub("^%s+", ""):gsub("%s+$", "")
 
-	if CurrentInput == "" then
+	if CurrentText == "" then
 		return
 	end
 
-	local Player = FindPlayer(CurrentInput)
+	local Player = FindPlayer(CurrentText)
 
 	if Player then
 		ExcludeBox.Text = Prefix .. Player.Name .. ", "
-		ExcludeBox.CursorPosition = #ExcludeBox.Text + 1
-	else
-		-- Keep the typed username if no matching player exists
-		ExcludeBox.Text = Prefix .. CurrentInput .. ", "
-		ExcludeBox.CursorPosition = #ExcludeBox.Text + 1
-	end
 
-	ExcludeBox:CaptureFocus()
+		-- Put cursor at the end
+		task.defer(function()
+			ExcludeBox.CursorPosition = #ExcludeBox.Text + 1
+		end)
+	end
 end
 
---// Press Enter to complete username
+--// Enter completes the username
 ExcludeBox.FocusLost:Connect(function(EnterPressed)
 	if EnterPressed then
-		task.defer(function()
-			CompleteUsername()
-		end)
+		CompleteCurrentUsername()
 	end
 end)
 
@@ -266,15 +265,15 @@ local function FireAtPlayer(Player)
 	WeaponHit:FireServer(unpack(args))
 end
 
---// Fire at every player except yourself and excluded players
+--// Fire at every player except local player and excluded players
 local function FireAtAllPlayers()
 	local Excluded = GetExcludedPlayers()
 
 	for _, Player in ipairs(Players:GetPlayers()) do
-		if Player ~= LocalPlayer then
-			if not Excluded[string.lower(Player.Name)] then
-				FireAtPlayer(Player)
-			end
+		if Player ~= LocalPlayer
+			and not Excluded[string.lower(Player.Name)] then
+
+			FireAtPlayer(Player)
 		end
 	end
 end
