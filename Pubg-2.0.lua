@@ -100,28 +100,24 @@ local function FindPlayer(Input)
 
 	local LowerInput = string.lower(Input)
 
-	-- Exact username
 	for _, Player in ipairs(Players:GetPlayers()) do
 		if string.lower(Player.Name) == LowerInput then
 			return Player
 		end
 	end
 
-	-- Username starts with typed text
 	for _, Player in ipairs(Players:GetPlayers()) do
 		if string.sub(string.lower(Player.Name), 1, #LowerInput) == LowerInput then
 			return Player
 		end
 	end
 
-	-- Exact display name
 	for _, Player in ipairs(Players:GetPlayers()) do
 		if string.lower(Player.DisplayName) == LowerInput then
 			return Player
 		end
 	end
 
-	-- Display name starts with typed text
 	for _, Player in ipairs(Players:GetPlayers()) do
 		if string.sub(string.lower(Player.DisplayName), 1, #LowerInput) == LowerInput then
 			return Player
@@ -135,7 +131,6 @@ end
 local function CompleteCurrentUsername()
 	local Text = ExcludeBox.Text
 
-	-- Find the last comma
 	local LastComma = string.match(Text, ".*(),")
 
 	local Prefix
@@ -160,18 +155,22 @@ local function CompleteCurrentUsername()
 	if Player then
 		ExcludeBox.Text = Prefix .. Player.Name .. ", "
 
-		-- Put cursor at the end
 		task.defer(function()
 			ExcludeBox.CursorPosition = #ExcludeBox.Text + 1
 		end)
 	end
 end
 
---// Enter completes the username
+--// Detect Enter from physical keyboard
 ExcludeBox.FocusLost:Connect(function(EnterPressed)
 	if EnterPressed then
 		CompleteCurrentUsername()
 	end
+end)
+
+--// Detect Enter/Return from the on-screen keyboard
+ExcludeBox.ReturnPressedFromOnScreenKeyboard:Connect(function()
+	CompleteCurrentUsername()
 end)
 
 --// Get excluded usernames
