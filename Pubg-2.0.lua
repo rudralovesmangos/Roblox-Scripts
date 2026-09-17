@@ -185,7 +185,7 @@ local function GetExcludedPlayers()
 	return Excluded
 end
 
---// Get SMG and automatically equip it
+--// Get and equip SMG
 local function GetAndEquipSMG()
 	local Character = LocalPlayer.Character
 
@@ -199,14 +199,12 @@ local function GetAndEquipSMG()
 		return nil
 	end
 
-	-- Already equipped
 	local EquippedSMG = Character:FindFirstChild("SMG")
 
 	if EquippedSMG and EquippedSMG:IsA("Tool") then
 		return EquippedSMG
 	end
 
-	-- Look in the Backpack
 	local Backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
 
 	if not Backpack then
@@ -218,7 +216,6 @@ local function GetAndEquipSMG()
 	if SMG and SMG:IsA("Tool") then
 		Humanoid:EquipTool(SMG)
 
-		-- Give Roblox a moment to move the Tool into the character
 		task.wait()
 
 		local Equipped = Character:FindFirstChild("SMG")
@@ -229,6 +226,48 @@ local function GetAndEquipSMG()
 	end
 
 	return nil
+end
+
+--// Play a loud rifle-style gunfire sound
+local function PlayGunFireSound(Weapon)
+	if not Weapon then
+		return
+	end
+
+	local SoundToPlay = nil
+
+	-- Prefer an existing firing sound from the weapon
+	for _, Object in ipairs(Weapon:GetDescendants()) do
+		if Object:IsA("Sound") then
+			local Name = string.lower(Object.Name)
+
+			if string.find(Name, "fire")
+				or string.find(Name, "shoot")
+				or string.find(Name, "shot")
+				or string.find(Name, "gun") then
+
+				SoundToPlay = Object
+				break
+			end
+		end
+	end
+
+	-- Fallback to the first weapon sound
+	if not SoundToPlay then
+		for _, Object in ipairs(Weapon:GetDescendants()) do
+			if Object:IsA("Sound") then
+				SoundToPlay = Object
+				break
+			end
+		end
+	end
+
+	if SoundToPlay then
+		-- Louder, punchier rifle-style playback
+		SoundToPlay.Volume = math.max(SoundToPlay.Volume, 3)
+		SoundToPlay.PlaybackSpeed = 0.85
+		SoundToPlay:Play()
+	end
 end
 
 --// Fire at one player
@@ -297,13 +336,19 @@ local function FireAtAllPlayers()
 	end
 
 	local Excluded = GetExcludedPlayers()
+	local Fired = false
 
 	for _, Player in ipairs(Players:GetPlayers()) do
 		if Player ~= LocalPlayer
 			and not Excluded[string.lower(Player.Name)] then
 
 			FireAtPlayer(Player, Weapon)
+			Fired = true
 		end
+	end
+
+	if Fired then
+		PlayGunFireSound(Weapon)
 	end
 end
 
