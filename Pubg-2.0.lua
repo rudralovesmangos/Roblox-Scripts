@@ -41,7 +41,7 @@ local TitleCorner = Instance.new("UICorner")
 TitleCorner.CornerRadius = UDim.new(0, 8)
 TitleCorner.Parent = Title
 
---// Excluded players label
+--// Exclude label
 local ExcludeLabel = Instance.new("TextLabel")
 ExcludeLabel.Size = UDim2.new(1, -20, 0, 20)
 ExcludeLabel.Position = UDim2.new(0, 10, 0, 43)
@@ -53,7 +53,7 @@ ExcludeLabel.Font = Enum.Font.Gotham
 ExcludeLabel.TextXAlignment = Enum.TextXAlignment.Left
 ExcludeLabel.Parent = Main
 
---// Excluded players textbox
+--// Exclude textbox
 local ExcludeBox = Instance.new("TextBox")
 ExcludeBox.Size = UDim2.new(1, -20, 0, 35)
 ExcludeBox.Position = UDim2.new(0, 10, 0, 65)
@@ -90,6 +90,91 @@ ToggleCorner.Parent = ToggleButton
 
 local Enabled = false
 
+--// Find player by username/display name
+local function FindPlayer(Input)
+	Input = Input:gsub("^%s+", ""):gsub("%s+$", "")
+
+	if Input == "" then
+		return nil
+	end
+
+	local LowerInput = string.lower(Input)
+
+	-- Exact username
+	for _, Player in ipairs(Players:GetPlayers()) do
+		if string.lower(Player.Name) == LowerInput then
+			return Player
+		end
+	end
+
+	-- Exact display name
+	for _, Player in ipairs(Players:GetPlayers()) do
+		if string.lower(Player.DisplayName) == LowerInput then
+			return Player
+		end
+	end
+
+	-- Username prefix
+	for _, Player in ipairs(Players:GetPlayers()) do
+		if string.sub(string.lower(Player.Name), 1, #LowerInput) == LowerInput then
+			return Player
+		end
+	end
+
+	-- Display name prefix
+	for _, Player in ipairs(Players:GetPlayers()) do
+		if string.sub(string.lower(Player.DisplayName), 1, #LowerInput) == LowerInput then
+			return Player
+		end
+	end
+
+	return nil
+end
+
+--// Complete the current username when Enter is pressed
+local function CompleteUsername()
+	local Text = ExcludeBox.Text
+
+	-- Get everything after the last comma
+	local LastComma = string.find(Text, ",[^,]*$")
+
+	local Prefix = ""
+	local CurrentInput = Text
+
+	if LastComma then
+		Prefix = string.sub(Text, 1, LastComma)
+		CurrentInput = string.sub(Text, LastComma + 1)
+	end
+
+	CurrentInput = CurrentInput:gsub("^%s+", ""):gsub("%s+$", "")
+
+	if CurrentInput == "" then
+		return
+	end
+
+	local Player = FindPlayer(CurrentInput)
+
+	if Player then
+		ExcludeBox.Text = Prefix .. Player.Name .. ", "
+		ExcludeBox.CursorPosition = #ExcludeBox.Text + 1
+	else
+		-- Keep the typed username if no matching player exists
+		ExcludeBox.Text = Prefix .. CurrentInput .. ", "
+		ExcludeBox.CursorPosition = #ExcludeBox.Text + 1
+	end
+
+	ExcludeBox:CaptureFocus()
+end
+
+--// Press Enter to complete username
+ExcludeBox.FocusLost:Connect(function(EnterPressed)
+	if EnterPressed then
+		task.defer(function()
+			CompleteUsername()
+		end)
+	end
+end)
+
 --// Get excluded usernames
 local function GetExcludedPlayers()
 	local Excluded = {}
@@ -105,7 +190,7 @@ local function GetExcludedPlayers()
 	return Excluded
 end
 
---// Get whatever Tool is currently equipped
+--// Get currently equipped Tool
 local function GetEquippedTool()
 	local Character = LocalPlayer.Character
 
@@ -151,7 +236,6 @@ local function FireAtPlayer(Player)
 
 	local TargetPosition = TargetPart.Position
 	local OriginPosition = MyCharacter:GetPivot().Position
-
 	local Difference = TargetPosition - OriginPosition
 
 	local Direction
