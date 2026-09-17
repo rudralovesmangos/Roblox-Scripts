@@ -127,10 +127,9 @@ local function FindPlayer(Input)
 	return nil
 end
 
---// Complete the username currently being typed
+--// Complete username
 local function CompleteCurrentUsername()
 	local Text = ExcludeBox.Text
-
 	local LastComma = string.match(Text, ".*(),")
 
 	local Prefix
@@ -161,14 +160,12 @@ local function CompleteCurrentUsername()
 	end
 end
 
---// Detect Enter from physical keyboard
 ExcludeBox.FocusLost:Connect(function(EnterPressed)
 	if EnterPressed then
 		CompleteCurrentUsername()
 	end
 end)
 
---// Detect Enter/Return from the on-screen keyboard
 ExcludeBox.ReturnPressedFromOnScreenKeyboard:Connect(function()
 	CompleteCurrentUsername()
 end)
@@ -188,17 +185,46 @@ local function GetExcludedPlayers()
 	return Excluded
 end
 
---// Get currently equipped Tool
-local function GetEquippedTool()
+--// Get SMG and automatically equip it
+local function GetAndEquipSMG()
 	local Character = LocalPlayer.Character
 
 	if not Character then
 		return nil
 	end
 
-	for _, Item in ipairs(Character:GetChildren()) do
-		if Item:IsA("Tool") then
-			return Item
+	local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+
+	if not Humanoid then
+		return nil
+	end
+
+	-- Already equipped
+	local EquippedSMG = Character:FindFirstChild("SMG")
+
+	if EquippedSMG and EquippedSMG:IsA("Tool") then
+		return EquippedSMG
+	end
+
+	-- Look in the Backpack
+	local Backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+
+	if not Backpack then
+		return nil
+	end
+
+	local SMG = Backpack:FindFirstChild("SMG")
+
+	if SMG and SMG:IsA("Tool") then
+		Humanoid:EquipTool(SMG)
+
+		-- Give Roblox a moment to move the Tool into the character
+		task.wait()
+
+		local Equipped = Character:FindFirstChild("SMG")
+
+		if Equipped and Equipped:IsA("Tool") then
+			return Equipped
 		end
 	end
 
@@ -206,7 +232,7 @@ local function GetEquippedTool()
 end
 
 --// Fire at one player
-local function FireAtPlayer(Player)
+local function FireAtPlayer(Player, Weapon)
 	local Character = Player.Character
 
 	if not Character then
@@ -225,8 +251,6 @@ local function FireAtPlayer(Player)
 	if not MyCharacter then
 		return
 	end
-
-	local Weapon = GetEquippedTool()
 
 	if not Weapon or not Humanoid or not TargetPart then
 		return
@@ -264,15 +288,21 @@ local function FireAtPlayer(Player)
 	WeaponHit:FireServer(unpack(args))
 end
 
---// Fire at every player except local player and excluded players
+--// Fire at all players
 local function FireAtAllPlayers()
+	local Weapon = GetAndEquipSMG()
+
+	if not Weapon then
+		return
+	end
+
 	local Excluded = GetExcludedPlayers()
 
 	for _, Player in ipairs(Players:GetPlayers()) do
 		if Player ~= LocalPlayer
 			and not Excluded[string.lower(Player.Name)] then
 
-			FireAtPlayer(Player)
+			FireAtPlayer(Player, Weapon)
 		end
 	end
 end
@@ -282,8 +312,16 @@ ToggleButton.MouseButton1Click:Connect(function()
 	Enabled = not Enabled
 
 	if Enabled then
-		ToggleButton.Text = "ON"
-		ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 130, 70)
+		local Weapon = GetAndEquipSMG()
+
+		if Weapon then
+			ToggleButton.Text = "ON"
+			ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 130, 70)
+		else
+			Enabled = false
+			ToggleButton.Text = "OFF"
+			ToggleButton.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
+		end
 	else
 		ToggleButton.Text = "OFF"
 		ToggleButton.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
