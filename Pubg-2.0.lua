@@ -17,8 +17,8 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 300, 0, 120)
-Main.Position = UDim2.new(0.5, -150, 0.5, -60)
+Main.Size = UDim2.new(0, 320, 0, 190)
+Main.Position = UDim2.new(0.5, -160, 0.5, -95)
 Main.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 Main.BorderSizePixel = 0
 Main.Parent = ScreenGui
@@ -41,10 +41,42 @@ local TitleCorner = Instance.new("UICorner")
 TitleCorner.CornerRadius = UDim.new(0, 8)
 TitleCorner.Parent = Title
 
+--// Excluded players label
+local ExcludeLabel = Instance.new("TextLabel")
+ExcludeLabel.Size = UDim2.new(1, -20, 0, 20)
+ExcludeLabel.Position = UDim2.new(0, 10, 0, 43)
+ExcludeLabel.BackgroundTransparency = 1
+ExcludeLabel.Text = "Players to exclude:"
+ExcludeLabel.TextColor3 = Color3.new(1, 1, 1)
+ExcludeLabel.TextSize = 14
+ExcludeLabel.Font = Enum.Font.Gotham
+ExcludeLabel.TextXAlignment = Enum.TextXAlignment.Left
+ExcludeLabel.Parent = Main
+
+--// Excluded players textbox
+local ExcludeBox = Instance.new("TextBox")
+ExcludeBox.Size = UDim2.new(1, -20, 0, 35)
+ExcludeBox.Position = UDim2.new(0, 10, 0, 65)
+ExcludeBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+ExcludeBox.BorderSizePixel = 0
+ExcludeBox.PlaceholderText = "username, username2, username3"
+ExcludeBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+ExcludeBox.Text = ""
+ExcludeBox.TextColor3 = Color3.new(1, 1, 1)
+ExcludeBox.TextSize = 14
+ExcludeBox.Font = Enum.Font.Gotham
+ExcludeBox.ClearTextOnFocus = false
+ExcludeBox.TextXAlignment = Enum.TextXAlignment.Left
+ExcludeBox.Parent = Main
+
+local ExcludeCorner = Instance.new("UICorner")
+ExcludeCorner.CornerRadius = UDim.new(0, 6)
+ExcludeCorner.Parent = ExcludeBox
+
 --// Toggle button
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Size = UDim2.new(1, -20, 0, 50)
-ToggleButton.Position = UDim2.new(0, 10, 0, 55)
+ToggleButton.Position = UDim2.new(0, 10, 0, 120)
 ToggleButton.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
 ToggleButton.Text = "OFF"
 ToggleButton.TextColor3 = Color3.new(1, 1, 1)
@@ -57,6 +89,21 @@ ToggleCorner.CornerRadius = UDim.new(0, 6)
 ToggleCorner.Parent = ToggleButton
 
 local Enabled = false
+
+--// Get excluded usernames
+local function GetExcludedPlayers()
+	local Excluded = {}
+
+	for Username in string.gmatch(ExcludeBox.Text, "[^,]+") do
+		Username = Username:gsub("^%s+", ""):gsub("%s+$", "")
+
+		if Username ~= "" then
+			Excluded[string.lower(Username)] = true
+		end
+	end
+
+	return Excluded
+end
 
 --// Get whatever Tool is currently equipped
 local function GetEquippedTool()
@@ -96,7 +143,6 @@ local function FireAtPlayer(Player)
 		return
 	end
 
-	-- Get whatever the player currently has equipped
 	local Weapon = GetEquippedTool()
 
 	if not Weapon or not Humanoid or not TargetPart then
@@ -136,11 +182,15 @@ local function FireAtPlayer(Player)
 	WeaponHit:FireServer(unpack(args))
 end
 
---// Fire at every player except yourself
+--// Fire at every player except yourself and excluded players
 local function FireAtAllPlayers()
+	local Excluded = GetExcludedPlayers()
+
 	for _, Player in ipairs(Players:GetPlayers()) do
 		if Player ~= LocalPlayer then
-			FireAtPlayer(Player)
+			if not Excluded[string.lower(Player.Name)] then
+				FireAtPlayer(Player)
+			end
 		end
 	end
 end
