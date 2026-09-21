@@ -1,0 +1,1 @@
+this script does is basically it teleports to the position in the game where you can win and it fires the hug event so it teleports someone to you and then drops them so they win, in a loop until all players got teleported.
