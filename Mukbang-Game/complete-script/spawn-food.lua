@@ -102,11 +102,29 @@ local args = {
 game:GetService("ReplicatedStorage").PlaceFoodOrderRemotes.PlaceDrinksOrder:FireServer(unpack(args))
 end
 
+function sauce()
+local args = {
+    [1] = {
+        [1] = "Cheese",
+        [2] = "Spicy",
+        [3] = "Mayo",
+        [4] = "Sweet n Sour",
+        [5] = "Ranch",
+        [6] = "Birria",
+        [7] = "Onion Powder",
+        [8] = "Honey Garlic"
+    }
+}
+
+game:GetService("ReplicatedStorage").PlaceFoodOrderRemotes.PlaceSauceOrder:FireServer(unpack(args))
+end
+
 task.spawn(friedChicken)
 task.spawn(desert)
 task.spawn(drink)
 task.spawn(noodle)
 task.spawn(snack)
 task.spawn(sushi)
+task.spawn(sauce)
 
 print("Done! Spawned All Food!")
